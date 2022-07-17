@@ -1,6 +1,9 @@
+/* eslint-disable no-unused-vars */
 import bcrypt from 'bcrypt'
+import { nanoid } from 'nanoid'
 import User, { validateUser } from '../model/user'
-import { AggregateUserCalendarByUserId } from '../helpers'
+import UserCredentials from '../model/userCredentials'
+import { AggregateUserCalendarByUserId } from '../utils/helpers'
 
 export const getUser = async (req, res) => {
   try {
@@ -37,12 +40,13 @@ export const getUsers = async (_req, res) => {
   try {
     const users = await User.aggregate([AggregateUserCalendarByUserId])
 
-    return res.json({
+    return res.status(200).json({
       success: true,
       data: users,
       message: 'Użytkownicy znalezieni !',
     })
   } catch (error) {
+    console.log(error)
     return res.status(400).json({
       success: false,
       data: [],
@@ -53,19 +57,35 @@ export const getUsers = async (_req, res) => {
 
 export const addUser = async (req, res) => {
   try {
-    await validateUser(req.body)
+    const { data } = req.body
+    const { login, password, name, lastname, dob, pin, adress, describe } = data
+
+    const id = nanoid()
+    await validateUser(data, 'addMode')
 
     let user = new User({
-      login: req?.body?.login,
-      password: req?.body?.password,
-      name: req?.body?.name,
-      lastName: req?.body?.lastName,
-      birthDate: req?.body?.birthDate,
-      pin: req?.body?.pin,
-      adress: req?.body?.adress,
+      _id: id,
+      login,
+      password,
+      name,
+      lastname,
+      dob,
+      pin,
+      adress,
+      describe,
+    })
+
+    let userCredentials = new UserCredentials({
+      _id: nanoid(),
+      login,
+      password,
+      source: {
+        userId: id,
+      },
     })
 
     user = await user.save()
+    userCredentials = await userCredentials.save()
 
     return res.json({
       success: true,
@@ -73,6 +93,7 @@ export const addUser = async (req, res) => {
       message: 'Dodałeś nowego użytkownika',
     })
   } catch (error) {
+    console.log(error)
     return res.status(400).json({
       success: false,
       data: [],
@@ -83,16 +104,16 @@ export const addUser = async (req, res) => {
 
 export const editUser = async (req, res) => {
   try {
-    await validateUser(req.body)
-    const { login, password, name, lastName, birthDate, pin, adress } = req.body
+    const { data } = req.body
+    const { name, lastname, dob, pin, adress } = req.body.data
+
+    await validateUser(data, 'editMode')
 
     const editedUser = new User({
       _id: req.params.id,
-      login,
-      password,
       name,
-      lastName,
-      birthDate,
+      lastname,
+      dob,
       pin,
       adress,
     })
@@ -128,11 +149,60 @@ export const editUser = async (req, res) => {
   }
 }
 
+export const editUserCredentials = async (req, res) => {
+  try {
+    const { data } = req.body
+    const { login, password } = req.body.data
+
+    await await validateUser(data, 'editUserCrudential')
+
+    const editedUserCredentials = new UserCredentials({
+      source: {
+        userId: req.params.id,
+      },
+      login,
+      password,
+    })
+
+    const userCredentials = await UserCredentials.findOneAndUpdate(
+      { 'source.userId': req.params.id },
+      editedUserCredentials,
+      {
+        new: true,
+      }
+    )
+
+    if (!userCredentials) {
+      return res.status(404).json({
+        success: false,
+        data: [],
+        message: 'Użytkownik o podanym id nie istnieje',
+      })
+    }
+
+    return res.json({
+      success: true,
+      data: userCredentials,
+      message: 'Hasło i Login zostało zmienione !',
+    })
+  } catch (error) {
+    console.log(error)
+    return res.json({
+      success: false,
+      data: [],
+      message: error,
+    })
+  }
+}
+
 export const deleteUser = async (req, res) => {
   try {
     const deletedUser = await User.findByIdAndDelete(req?.params?.id)
+    const deletedUserCredentials = await UserCredentials.findOneAndDelete({
+      'source.userId': req?.params?.id,
+    })
 
-    if (!deletedUser) {
+    if (!deletedUser && !deletedUserCredentials) {
       return res.status(404).json({
         success: false,
         data: [],
@@ -164,7 +234,7 @@ export const loginUser = async (req, res) => {
   }
 
   try {
-    const user = await User.findOne({ login })
+    const user = await User.UserCredential({ login })
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -230,4 +300,20 @@ export const isUserAuth = async (req, res, next) => {
     data: [],
     message: 'Unauthorize',
   })
+}
+
+export const isUserExist = async (req, res) => {
+  const isExist = await UserCredentials.exists({ login: req.body.login })
+
+  return isExist !== null
+    ? res.status(409).json({
+        success: false,
+        data: [],
+        message: 'Login is already taken',
+      })
+    : res.status(200).json({
+        success: true,
+        data: [],
+        message: 'Login is not taken',
+      })
 }
