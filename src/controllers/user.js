@@ -46,7 +46,6 @@ export const getUsers = async (_req, res) => {
       message: 'Użytkownicy znalezieni !',
     })
   } catch (error) {
-    console.log(error)
     return res.status(400).json({
       success: false,
       data: [],
@@ -93,7 +92,6 @@ export const addUser = async (req, res) => {
       message: 'Dodałeś nowego użytkownika',
     })
   } catch (error) {
-    console.log(error)
     return res.status(400).json({
       success: false,
       data: [],
@@ -105,7 +103,7 @@ export const addUser = async (req, res) => {
 export const editUser = async (req, res) => {
   try {
     const { data } = req.body
-    const { name, lastname, dob, pin, adress } = req.body.data
+    const { name, lastname, dob, pin, adress, describe } = req.body.data
 
     await validateUser(data, 'editMode')
 
@@ -116,6 +114,7 @@ export const editUser = async (req, res) => {
       dob,
       pin,
       adress,
+      describe,
     })
 
     const user = await User.findOneAndUpdate(
@@ -140,7 +139,6 @@ export const editUser = async (req, res) => {
       message: 'Użytkownik Edytowany !',
     })
   } catch (error) {
-    console.log(error)
     return res.json({
       success: false,
       data: [],
@@ -154,7 +152,7 @@ export const editUserCredentials = async (req, res) => {
     const { data } = req.body
     const { login, password } = req.body.data
 
-    await await validateUser(data, 'editUserCrudential')
+    await validateUser(data, 'editUserCrudential')
 
     const editedUserCredentials = new UserCredentials({
       source: {
@@ -186,7 +184,6 @@ export const editUserCredentials = async (req, res) => {
       message: 'Hasło i Login zostało zmienione !',
     })
   } catch (error) {
-    console.log(error)
     return res.json({
       success: false,
       data: [],
@@ -259,7 +256,11 @@ export const loginUser = async (req, res) => {
         message: 'Podane hasło jest nieprawidłowe',
       })
     }
-    const userSession = { login: user.login }
+    const userSession = {
+      name: user.name,
+      surname: user.surname,
+      login: user.login,
+    }
     req.session.user = userSession
 
     return res.status(200).json({
@@ -302,18 +303,18 @@ export const isUserAuth = async (req, res, next) => {
   })
 }
 
-export const isUserExist = async (req, res) => {
-  const isExist = await UserCredentials.exists({ login: req.body.login })
+export const isResourceExists = async (req, res) => {
+  const record = await UserCredentials.findOne({ login: req.body.login })
 
-  return isExist !== null
+  return record !== null
     ? res.status(409).json({
         success: false,
-        data: [],
-        message: 'Login is already taken',
+        data: { user: record.source.userId },
+        message: 'resource already exists',
       })
     : res.status(200).json({
         success: true,
         data: [],
-        message: 'Login is not taken',
+        message: `resource doesn't exist`,
       })
 }
