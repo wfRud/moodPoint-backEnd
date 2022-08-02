@@ -1,11 +1,19 @@
 import express from 'express'
-import { isAdminAuth, loginAdmin, logoutAdmin } from '../controllers/admin'
+import {
+  isAuth,
+  isAdminAuth,
+  loginAdmin,
+  logoutAdmin,
+  getAdmin,
+} from '../controllers/admin'
 
 const router = express.Router()
 
-router.post('/login', loginAdmin)
-
 router.get('/isAuth', isAdminAuth)
+
+router.get('/:id', isAuth, getAdmin)
+
+router.post('/login', loginAdmin)
 
 router.delete('/logout', logoutAdmin)
 
