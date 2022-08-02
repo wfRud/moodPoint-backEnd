@@ -1,10 +1,11 @@
 import ContactRequestModel, {
-  validateContactRequestModel,
+  validateContactRequestSchema,
+  validateContactRequestNoteSchema,
 } from '../model/contactRequest'
 
 export const addContactRequest = async (req, res) => {
   try {
-    await validateContactRequestModel(req.body)
+    await validateContactRequestSchema(req.body)
 
     let contactRequest = new ContactRequestModel({
       source: {
@@ -54,7 +55,6 @@ export const updateContactrequest = async (req, res) => {
       message: 'Prośba o kontakt zmieniona !',
     })
   } catch (error) {
-    console.log(error)
     return res.status(400).json({
       success: false,
       data: [],
@@ -64,7 +64,10 @@ export const updateContactrequest = async (req, res) => {
 }
 export const addNoteToContactrequest = async (req, res) => {
   try {
+    await validateContactRequestNoteSchema(req.body)
+
     const { text, timestamp } = req.body.note
+
     const editedContactRequest = await ContactRequestModel.findOneAndUpdate(
       { _id: req.params.id },
       [{ $addFields: { note: { text, timestamp } } }],
@@ -84,6 +87,35 @@ export const addNoteToContactrequest = async (req, res) => {
       success: true,
       data: editedContactRequest,
       message: 'Notatka została dodana !',
+    })
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      data: [],
+      message: error,
+    })
+  }
+}
+
+export const getContactRequestsOfUserByDate = async (req, res) => {
+  try {
+    const now = new Date(req.query.date).getTime()
+    const startOfDate = new Date(now - (now % 86400000)).toISOString()
+    const endOfDate = new Date(
+      now - (now % 86400000) + (86400000 - 1)
+    ).toISOString()
+
+    const users = await ContactRequestModel.find({
+      $and: [
+        { 'source.userId': req.params.id },
+        { timestamp: { $gte: startOfDate, $lte: endOfDate } },
+      ],
+    })
+
+    return res.status(200).json({
+      success: true,
+      data: users,
+      message: 'Pobrano prośby kontaktu !',
     })
   } catch (error) {
     return res.status(400).json({
