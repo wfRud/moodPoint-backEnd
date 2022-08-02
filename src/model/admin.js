@@ -23,11 +23,15 @@ const adminSchema = new Schema({
     trim: true,
     required: true,
   },
-  lastName: {
+  lastname: {
     type: String,
     minlength: 3,
     maxlength: 30,
     trim: true,
+    required: true,
+  },
+  company: {
+    type: String,
     required: true,
   },
 })

@@ -10,19 +10,37 @@ const contactRequestSchema = new Schema({
   },
   timestamp: { type: Date, required: true },
   resolve: { type: Boolean, required: true },
+  note: {
+    text: String,
+    timestamp: Date,
+  },
 })
 
-const JoiSchemaContactRequest = Joi.object({
+const schemaContactRequest = {
   source: Joi.object({
     userId: Joi.string().required(),
     deviceId: Joi.string().required(),
   }),
   timestamp: Joi.date().required(),
   resolve: Joi.boolean().required(),
-})
+  note: Joi.object({
+    text: Joi.string(),
+    timestamp: Joi.date(),
+  }),
+}
 
-export const validateContactRequestModel = (data) =>
-  JoiSchemaContactRequest.validateAsync(data, { abortEarly: false })
+const joiSchemaContactRequest = Joi.object(schemaContactRequest)
+
+const joiSchemaContactRequesstNote = Joi.object(schemaContactRequest).fork(
+  ['resolve', 'source', 'timestamp'],
+  (schema) => schema.allow('').optional()
+)
+
+export const validateContactRequestSchema = (data) =>
+  joiSchemaContactRequest.validateAsync(data, { abortEarly: false })
+
+export const validateContactRequestNoteSchema = (data) =>
+  joiSchemaContactRequesstNote.validateAsync(data, { abortEarly: false })
 
 const ContactRequestModel = Mongoose.model(
   'ContactRequest',
