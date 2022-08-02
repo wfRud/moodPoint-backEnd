@@ -18,6 +18,8 @@ const port = process.env.PORT
 const dbUser = process.env.DB_USER
 const dbPassword = process.env.DB_PASSWORD
 const dbName = process.env.DB_NAME
+const nodeEnv = process.env.NODE_ENV
+const inProd = nodeEnv === 'production'
 const dbString = `mongodb+srv://${dbUser}:${dbPassword}@cluster0.dclwf.mongodb.net/${dbName}?retryWrites=true&w=majority`
 
 const maxAge = new Date('2099-01-01T00:00:00+0000').getTime()
@@ -35,7 +37,15 @@ const mongoDBStore = new MongoDBStore({
   expires: maxAge,
 })
 
-app.use(Cors())
+app.disable('x-powered-by')
+
+const corsOptions = {
+  optionsSuccessStatus: 200,
+  credentials: true,
+  origin: 'http://localhost:3000',
+}
+
+app.use(Cors(corsOptions))
 app.use(Helmet())
 app.use(limiter)
 app.use(Morgan('tiny'))
@@ -49,9 +59,9 @@ app.use(
     cookie: {
       maxAge,
       sameSite: false,
-      secure: false,
+      secure: inProd,
     },
-    resave: true,
+    resave: false,
     saveUninitialized: false,
   })
 )
