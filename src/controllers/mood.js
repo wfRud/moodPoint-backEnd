@@ -48,7 +48,6 @@ export const getUserMoods = async (req, res) => {
       message: 'Użytkownik znaleziony',
     })
   } catch (error) {
-    console.log(error)
     return res.status(400).json({
       success: false,
       data: [],
